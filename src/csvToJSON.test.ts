@@ -119,11 +119,11 @@ describe('csvToJSON', () => {
             const input = [
                 'p1;p2;p3',
                 '1;A;b',
-                '2;B'
+                '2;B'  // здесь только 2 поля, а должно быть 3
             ];
-            
+    
             expect(() => csvToJSON(input, ';')).toThrow(
-                'Row 3 has 1 fields, but expected 3 fields'
+                'Row 3 has 2 fields, but expected 3 fields'  // исправлено с 1 на 2
             );
         });
     });
