@@ -1,5 +1,4 @@
 import { readFile, writeFile } from 'node:fs/promises';
-
 /**
  * Преобразует CSV массив строк в массив объектов
  * @param input - массив строк (первая - заголовки, остальные - данные)
@@ -17,9 +16,14 @@ export function csvToJSON(input: string[], delimiter: string): object[] {
     }
 
     // Получаем заголовки из первой строки
-    const headers = input[0].split(delimiter).map(h => h.trim());
+    const firstRow = input[0].trim();
+    if (!firstRow) {
+        throw new Error('No headers found in first row');
+    }
     
-    if (headers.length === 0) {
+    const headers = firstRow.split(delimiter).map(h => h.trim());
+    
+    if (headers.length === 0 || (headers.length === 1 && headers[0] === '')) {
         throw new Error('No headers found in first row');
     }
 
@@ -27,6 +31,11 @@ export function csvToJSON(input: string[], delimiter: string): object[] {
 
     // Обрабатываем строки данных (начиная с индекса 1)
     for (let i = 1; i < input.length; i++) {
+        // Пропускаем пустые строки
+        if (!input[i].trim()) {
+            continue;
+        }
+        
         const values = input[i].split(delimiter).map(v => v.trim());
         
         // Проверяем соответствие количества полей
@@ -42,9 +51,23 @@ export function csvToJSON(input: string[], delimiter: string): object[] {
             const value = values[j];
             const header = headers[j];
             
-            // Пытаемся преобразовать в число, если возможно
-            const numberValue = Number(value);
-            obj[header] = isNaN(numberValue) || value === '' ? value : numberValue;
+            // Пытаемся преобразовать в число, если это число
+            // Но сохраняем ведущие нули как строки
+            if (value === '') {
+                obj[header] = '';
+            } else {
+                const numberValue = Number(value);
+                // Если это число и не NaN, и не теряем ведущие нули
+                // (проверяем, что строка не начинается с 0 и содержит только цифры)
+                const isNumericValue = !isNaN(numberValue) && value !== '';
+                const hasLeadingZero = value.length > 1 && value[0] === '0';
+                
+                if (isNumericValue && !hasLeadingZero) {
+                    obj[header] = numberValue;
+                } else {
+                    obj[header] = value;
+                }
+            }
         }
 
         result.push(obj);
